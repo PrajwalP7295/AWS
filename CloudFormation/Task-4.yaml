@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  CFLaunchTemp:
+    Type: 'AWS::EC2::LaunchTemplate'
+    Properties:
+      LaunchTemplateName: cf-lt
+      LaunchTemplateData:
+        NetworkInterfaces:
+          - DeviceIndex: 0
+            AssociatePublicIpAddress: true
+            Groups:
+              - !ImportValue SGid
+        ImageId: ami-007855ac798b5175e
+        InstanceType: t2.micro
+        KeyName: DevOpsPrac
+        Placement:
+          Tenancy: default
+        UserData: !Base64 |
+          #!/bin/bash
+          echo "CloudFormation Task-4 Complete!" > /var/www/html/index.html
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: cf-lt-instance
+        
+  CFTaskASG:
+    Type: 'AWS::AutoScaling::AutoScalingGroup'
+    Properties:
+      AutoScalingGroupName: cf-task-asg
+      MinSize: '1'
+      MaxSize: '1'
+      DesiredCapacity: '1'
+      VPCZoneIdentifier:
+        - !ImportValue PvtSub1Id
+        - !ImportValue PvtSub1Id
+      LaunchTemplate:
+        LaunchTemplateId: !Ref CFLaunchTemp
+        Version: !GetAtt CFLaunchTemp.LatestVersionNumber
+      TargetGroupARNs:
+        - !ImportValue TGarn
+      MetricsCollection:
+        - Granularity: "1Minute"
+          Metrics:
+            - "GroupMinSize"
+            - "GroupMaxSize"
+            - "GroupDesiredCapacity"
+            - "GroupInServiceInstances"
+            - "GroupPendingInstances"
+            - "GroupStandbyInstances"
+            - "GroupTerminatingInstances"
+            - "GroupTotalInstances"
+      Tags:
+        - Key: Name
+          Value: "MyASG"
+          PropagateAtLaunch: true
+      Cooldown: "300"
+      HealthCheckGracePeriod: 300
+      HealthCheckType: "EC2"
+      TerminationPolicies:
+        - OldestInstance
