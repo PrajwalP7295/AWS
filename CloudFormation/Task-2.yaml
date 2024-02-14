@@ -1,0 +1,91 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  CFTaskEC2SG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: 'CF-Task-EC2-SG'
+      GroupDescription: 'SG for CF task 2 EC2'
+      VpcId: !ImportValue VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0 
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306 
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+  CFEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-007855ac798b5175e
+      InstanceType: t2.micro
+      KeyName: DevOpsPrac
+      NetworkInterfaces:
+        - DeviceIndex: '0'
+          AssociatePublicIpAddress: true
+          SubnetId: !ImportValue PubSub1Id
+          GroupSet:
+            - !Ref 'CFTaskEC2SG'
+      # SubnetId: !ImportValue PubSub1Id
+      # SecurityGroupIds:
+        # - !Ref 'CFTaskEC2SG'
+      UserData: !Base64 |
+          #!/bin/bash
+          sudo apt-get update
+          sudo apt-get install -y nginx
+          sudo systemctl start nginx
+          sudo systemctl enable nginx
+      Tags:
+        - Key: 'Name'
+          Value: 'CF-EC2-Task-Instance'
+  DBSubGrp:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties: 
+      DBSubnetGroupDescription: 'Subnet Grp. for RDS'
+      DBSubnetGroupName: 'cf-db-sub-grp'
+      SubnetIds:
+        - !ImportValue PvtSub1Id
+        - !ImportValue PvtSub2Id
+  DBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBName: 'cftaskdb'
+      DBInstanceIdentifier: 'cf-task-2-db'
+      DBInstanceClass: db.t3.micro
+      Engine: mysql
+      MasterUsername: admin
+      MasterUserPassword: Pass1234
+      AllocatedStorage: '8'
+      DBSubnetGroupName: !Ref DBSubGrp
+      MultiAZ: false
+      VPCSecurityGroups:
+        - !Ref CFTaskEC2SG
+Outputs:
+  SGid:
+    Description: The ID of the Security Group
+    Value: !Ref CFTaskEC2SG
+    Export:
+      Name: "SGid"
+  EC2id:
+    Description: The ID of the EC2 Instance
+    Value: !Ref CFEC2Instance
+    Export:
+      Name: "EC2id"
+  # EC2pubip:
+  #   Description: Public IP of EC2 instance
+  #   Value: !GetAtt CFEC2Instance.
+      
