@@ -1,0 +1,128 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  VPC1:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: '10.0.0.0/16'
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: 'Name'
+          Value: 'CF-VPC'
+  IGW1:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: 'Name'
+          Value: 'CF-IGW'
+  IGW1Attachment:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties: 
+      InternetGatewayId: !Ref IGW1
+      VpcId: !Ref VPC1
+  PubSub1:
+    Type: 'AWS::EC2::Subnet'
+    Properties: 
+      AvailabilityZone: us-east-1a
+      CidrBlock: '10.0.1.0/24'
+      Tags: 
+        - Key: 'Name'
+          Value: 'CF-Pub-Sub-1'
+      VpcId: !Ref VPC1
+  PubSub2:
+    Type: 'AWS::EC2::Subnet'
+    Properties: 
+      AvailabilityZone: us-east-1b
+      CidrBlock: '10.0.2.0/24'
+      Tags: 
+        - Key: 'Name'
+          Value: 'CF-Pub-Sub-2'
+      VpcId: !Ref VPC1
+  PvtSub1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC1
+      AvailabilityZone: us-east-1a
+      CidrBlock: '10.0.3.0/24'
+      Tags: 
+        - Key: 'Name'
+          Value: 'CF-Pvt-Sub-1'
+  PvtSub2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC1
+      AvailabilityZone: us-east-1b
+      CidrBlock: '10.0.4.0/24'
+      Tags: 
+        - Key: 'Name'
+          Value: 'CF-Pvt-Sub-2'
+  PublicRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties: 
+      Tags: 
+        - Key: 'Name'
+          Value: 'CF-Pub-RT'
+      VpcId: !Ref VPC1
+  PublicRoute:
+    Type: 'AWS::EC2::Route'
+    DependsOn: 'IGW1Attachment'
+    Properties: 
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref IGW1
+      RouteTableId: !Ref PublicRouteTable
+  PubSub1Asso:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PubSub1
+      RouteTableId: !Ref PublicRouteTable
+  PubSub2Assoc:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PubSub2
+      RouteTableId: !Ref PublicRouteTable
+  PrivateRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC1
+      Tags:
+        - Key: 'Name'
+          Value: 'CF-Pvt-RT'
+  PvtSub1Asso:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PvtSub1
+      RouteTableId: !Ref PrivateRouteTable
+  PvtSub2Asso:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PvtSub2
+      RouteTableId: !Ref PrivateRouteTable
+  
+Outputs:
+  VPCid:
+    Description: The ID of the VPC
+    Value: !Ref VPC1
+    Export:
+      Name: "VpcId"
+  PubSub1id:
+    Description: The ID of the Pub-Sub-1
+    Value: !Ref PubSub1
+    Export:
+      Name: "PubSub1Id"
+  PubSub2id:
+    Description: The ID of the Pub-Sub-2
+    Value: !Ref PubSub2
+    Export:
+      Name: "PubSub2Id"
+  PvtSub1id:
+    Description: The ID of the Pvt-Sub-1
+    Value: !Ref PvtSub1
+    Export:
+      Name: "PvtSub1Id"
+  PvtSub2id:
+    Description: The ID of the Pvt-Sub-2
+    Value: !Ref PvtSub2
+    Export:
+      Name: "PvtSub2Id"
+  
+  
